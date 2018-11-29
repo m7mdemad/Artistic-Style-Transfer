@@ -3,7 +3,7 @@ from numpy import linalg as LA
 
 
 def IRLS(R, X, Z):
-    r = 0.8  # robust statistics value to use (from the research paper)
+    r = 0.8  # robust statistics value to use (from the paper)
     limit = 10  # no. of iterations
     Xk = X
     for i in range(1, limit):
