@@ -1,7 +1,5 @@
 import numpy as np
-import skimage.filters as flt
 from commonfunctions import *
-import cv2
 
 
 def hist_match(content, style):
@@ -49,14 +47,12 @@ def color_transform(content, style):
     matchedr = hist_match(rcomp_C, rcomp_S)
     matchedg = hist_match(gcomp_C, gcomp_S)
     matchedb = hist_match(bcomp_C, bcomp_S)
+    
+    return np.stack([matchedr, matchedg, matchedb], axis=2).astype('uint8')
 
-    return cv2.merge((matchedr, matchedg, matchedb)).astype('uint8')
 
-
-content = io.imread(
-    r'''images\house 2-small.jpg''')
-style = io.imread(
-    r'''images\starry-night - small.jpg''')
+content = io.imread(r"images/house 2-small.jpg")
+style = io.imread(r"images/starry-night - small.jpg")
 
 show_images([content, style])
 

@@ -3,23 +3,8 @@
 import skimage.io as io
 import matplotlib.pyplot as plt
 import numpy as np
-from skimage.exposure import histogram
-from matplotlib.pyplot import bar
-from skimage.color import rgb2gray,rgb2hsv
-
-# Convolution:
-from scipy.signal import convolve2d
-from scipy import fftpack
-import math
-
-from skimage.util import random_noise
-from skimage.filters import median
-from skimage.feature import canny
 
 
-
-# Edges
-from skimage.filters import sobel_h, sobel, sobel_v,roberts, prewitt
 
 # Show the figures / plots inside the notebook
 def show_images(images,titles=None):
@@ -39,11 +24,3 @@ def show_images(images,titles=None):
         n += 1
     fig.set_size_inches(np.array(fig.get_size_inches()) * n_ims)
     plt.show() 
-
-
-def showHist(img):
-    # An "interface" to matplotlib.axes.Axes.hist() method
-    plt.figure()
-    imgHist = histogram(img, nbins=256)
-    
-    bar(imgHist[1].astype(np.uint8), imgHist[0], width=0.8, align='center')
