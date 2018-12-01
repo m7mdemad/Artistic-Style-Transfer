@@ -10,8 +10,6 @@ edges3=np.copy(img)
 ###### Edge detection
 edges = cv2.Canny(img,100,200)
 ######## face detection
-cascPath = "haarcascade_frontalface_default.xml"
-
 gray=cm.rgb2gray(img)
 faceCascade = cv2.CascadeClassifier('image.xml')
 
@@ -30,8 +28,11 @@ for (x, y, w, h) in faces:
 #noise1= random_noise(edges, mode = 's&p', amount = 0.05)
 
 # domain transform
-edges2= a.dtFilter(img, edges, sigmaSpatial=100, sigmaColor=0.03, mode=a.DTF_NC, numIters=3)
-cm.show_images([img,edges,edges2],[" main"," segment1 ","transform"])
+edges2= a.dtFilter(edges3, edges, sigmaSpatial=100, sigmaColor=0.03, mode=a.DTF_NC, numIters=3)
+cm.show_images([edges3,edges,img,edges2],[" main"," segment1 ","faces","transform"])
 
 
 
+#face detection input gray ->img in gray level     output->faces (co ordinates of faces in image)
+#domian transfer  input = edges3 (main image)   edges = noisy image
+#edge detection input image and output image (nothing)
