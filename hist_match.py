@@ -50,15 +50,15 @@ def color_transform(content, style):
     
     return np.stack([matchedr, matchedg, matchedb], axis=2).astype('uint8')
 
+def test():
+    content = io.imread(r"images/house 2-small.jpg")
+    style = io.imread(r"images/starry-night - small.jpg")
 
-content = io.imread(r"images/house 2-small.jpg")
-style = io.imread(r"images/starry-night - small.jpg")
+    show_images([content, style])
 
-show_images([content, style])
+    myimg = color_transform(content, style)
 
-myimg = color_transform(content, style)
-
-show_images([myimg])
+    show_images([myimg])
 # add gaussian noise
 '''
 row,col,ch= myimg.shape
