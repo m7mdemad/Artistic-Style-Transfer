@@ -5,7 +5,7 @@ from skimage.transform import pyramid_gaussian
 from skimage.util import noise
 from NN import *
 from skimage.transform import rescale
-
+import pandas as pd
 
 
 L_max = 3
@@ -26,18 +26,18 @@ def initialize(content, style, segmentation):
     # apply color transfer from S to C
     new_content = color_transform(content, style)
     # Build the Gaussian pyramids of C, S, and W
-    content_pyramid = list(pyramid_gaussian(new_content, multichannel=True, max_layer=L_max))
-    style_pyramid = list(pyramid_gaussian(style, multichannel=True, max_layer=L_max))
-    # segmentation_pyramid = list(pyramid_gaussian(segmentation, multichannel=True, max_layer=L_max))
-    segmentation_pyramid = [None]*(L_max+1)
+    images = pd.DataFrame(index=["L" + str(i) for i in range(L_max + 1)], columns=['content', 'style', 'segmentation', 'estimation'])
+    images['content'] = list(pyramid_gaussian(new_content, multichannel=True, max_layer=L_max))
+    images['style'] = list(pyramid_gaussian(style, multichannel=True, max_layer=L_max))
+    # iamges['segmentation'] = list(pyramid_gaussian(segmentation, multichannel=True, max_layer=L_max))
+    images['segmentation'] = [None]*(L_max+1)
 
     # initialize X with additive gaussian to content ∼ N (0, 50)
     estimated_image = noise.random_noise(content, mode="gaussian", mean=0,
                                          var=50 / 256)  # normalized variance because image is normalized
-    # estimated_image_pyramid = list(pyramid_gaussian(estimated_image, multichannel=True, max_layer=L_max))
-    estimated_image = rescale(estimated_image, 1 / (2 ** L_max), multichannel=True,anti_aliasing=True, mode='constant', cval=0)
+    images['estimation'][images.index[-1]] = rescale(estimated_image, 1 / (2 ** L_max), multichannel=True,anti_aliasing=True, mode='constant', cval=0)
 
-    return content_pyramid, style_pyramid, segmentation_pyramid, estimated_image
+    return images
 
 
 """
@@ -71,27 +71,21 @@ def image_to_patches(image, overlapping_patches=True, is_pyramid=True):
 """
 
 def prepare_style_patches(style_pyramid):
-    patches_pyramid = image_to_patches(style_pyramid)
+    
+    style_patches = pd.DataFrame(data=image_to_patches(style_pyramid),
+                                 index=["L" + str(i) for i in range(L_max + 1)], columns=patch_sizes)
+    scaler  = pd.DataFrame(index=["L" + str(i) for i in range(L_max + 1)], columns=patch_sizes)
+    pca     = pd.DataFrame(index=["L" + str(i) for i in range(L_max + 1)], columns=patch_sizes)
+    nbrs    = pd.DataFrame(index=["L" + str(i) for i in range(L_max + 1)], columns=patch_sizes)
+    for layer in style_patches.index:
+        for patch_size in style_patches.columns:
+            style_patches[patch_size][layer] , scaler_obj = apply_standard_Scaler(style_patches[patch_size][layer])
+            scaler[patch_size][layer] = scaler_obj
+            style_patches[patch_size][layer], pca_obj = apply_pca(style_patches[patch_size][layer])
+            pca[patch_size][layer] = pca_obj
+            nbrs[patch_size][layer] = apply_nearest_neighbor(style_patches[patch_size][layer])
 
-    scaler = []
-    pca = []
-    nbrs = []
-    for layer_index, layer in enumerate(patches_pyramid):
-        layer_scaler_objs = []
-        layer_pca_objs = []
-        layer_nbrs_objs = []
-        for patches_index, patches in enumerate(layer):
-            patches_pyramid[layer_index][patches_index], scaler_obj = apply_standard_Scaler(patches)
-            layer_scaler_objs.append(scaler_obj)
-            patches_pyramid[layer_index][patches_index], pca_obj = apply_pca(patches)
-            layer_pca_objs.append(pca_obj)
-            nbrs_obj = apply_nearest_neighbor(patches)
-            layer_nbrs_objs.append(nbrs_obj)
-        scaler.append(layer_scaler_objs)
-        pca.append(layer_pca_objs)
-        nbrs.append(layer_nbrs_objs)
-
-    return scaler, pca, nbrs, patches_pyramid
+    return scaler, pca, nbrs, style_patches
 
 
 def main():
@@ -103,36 +97,37 @@ def main():
     segmentation = None
     # show_images([content, style, segmentation])
     
-    content_pyramid, style_pyramid, segmentation_pyramid, estimation_image = initialize(content, style, segmentation)
-    scaler_objects, pca_objects, nn_objects, style_patches_pyramid = prepare_style_patches(style_pyramid)
-    estimation_patches_pyramid = image_to_patches(estimation_image, is_pyramid=False)
-
-    for layer_index, content_layer, style_layer, segmentation_layer, estimation_patches_layer, \
-        scaler_objects_layer, pca_objects_layer, nn_objects_layer, style_patches_layer in reversed(
-        list(enumerate(
-            zip(content_pyramid, style_pyramid, segmentation_pyramid, estimation_patches_pyramid,
-                scaler_objects, pca_objects, nn_objects, style_patches_pyramid)))):
-        for patch_size_index, patch_size, gap, scaler, pca, nn, style_patches, estimation_patches in \
-                enumerate(zip(patch_sizes, subsampling_gaps, scaler_objects_layer, pca_objects_layer,
-                              nn_objects_layer, style_patches_layer, estimation_patches_layer)):
-
-            nn_style = np.zeros_like(estimation_image)
-            scaled_estimation_patches = apply_standard_Scaler(estimation_patches_layer, scaler=scaler)
+    
+    images = initialize(content, style, segmentation)
+    scaler_objects, pca_objects, nn_objects, style_patches = prepare_style_patches(images['style'])
+    for layer in reversed(style_patches.index):
+        estimation_patches = pd.DataFrame(data=image_to_patches(images['estimation'][layer], is_pyramid=False)).transpose()
+        estimation_patches.columns , estimation_patches.index = patch_sizes, [layer]
+        for patch_size in style_patches.columns:
+            # add another loop for IRLS itarations
+            scaler  = scaler_objects[patch_size][layer]
+            pca     = pca_objects[patch_size][layer]
+            nn      = nn_objects[patch_size][layer]
+            style_p = style_patches[patch_size][layer]
+            estimation_p = estimation_patches[patch_size][layer]
+ #           nn_style = np.zeros_like(estimation_image)
+            scaled_estimation_patches = apply_standard_Scaler(estimation_p, scaler=scaler)
             reduced_estimation_patches = apply_pca(scaled_estimation_patches, pca=pca)
             nn_indices = apply_nearest_neighbor(reduced_estimation_patches, nbrs=nn)
-            nn_reduced_style_patches = style_patches[nn_indices]
+            nn_reduced_style_patches = style_p[(nn_indices.T)[0]]
             nn_unreduced_estimation_patches = apply_pca(nn_reduced_style_patches, pca=pca, inverse=True)
             nn_style_patches = apply_standard_Scaler(nn_unreduced_estimation_patches, scaler=scaler, inverse=True)
-
-            vertical_patch_count = nn_style.shape[0] // patch_size
-            horizontal_patch_count = nn_style.shape[1] // patch_size
-            patch_index = 0
-            for v_index in range(vertical_patch_count):
-                for h_index in range(horizontal_patch_count):
-                    nn_style[v_index * patch_size: v_index * patch_size + patch_size,
-                    h_index * patch_size: h_index * patch_size + patch_size] = \
-                        nn_style_patches[patch_index].reshape((patch_sizes, patch_sizes, 3))
-                    patch_index += 1
+            
+#
+#            vertical_patch_count = nn_style.shape[0] // patch_size
+#            horizontal_patch_count = nn_style.shape[1] // patch_size
+#            patch_index = 0
+#            for v_index in range(vertical_patch_count):
+#                for h_index in range(horizontal_patch_count):
+#                    nn_style[v_index * patch_size: v_index * patch_size + patch_size,
+#                    h_index * patch_size: h_index * patch_size + patch_size] = \
+#                        nn_style_patches[patch_index].reshape((patch_sizes, patch_sizes, 3))
+#                    patch_index += 1
 
             # nn_style image should be ready by now
 
