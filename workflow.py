@@ -101,6 +101,7 @@ def main():
     images = initialize(content, style, segmentation)
     scaler_objects, pca_objects, nn_objects, style_patches = prepare_style_patches(images['style'])
     for layer in reversed(style_patches.index):
+        # convert estimation image of the current layer to patches we can operate on
         estimation_patches = pd.DataFrame(data=image_to_patches(images['estimation'][layer], is_pyramid=False)).transpose()
         estimation_patches.columns , estimation_patches.index = patch_sizes, [layer]
         for patch_size in style_patches.columns:
@@ -116,9 +117,9 @@ def main():
             nn_indices = apply_nearest_neighbor(reduced_estimation_patches, nbrs=nn)
             nn_reduced_style_patches = style_p[(nn_indices.T)[0]]
             nn_unreduced_estimation_patches = apply_pca(nn_reduced_style_patches, pca=pca, inverse=True)
-            nn_style_patches = apply_standard_Scaler(nn_unreduced_estimation_patches, scaler=scaler, inverse=True)
+            nn_style_patches = apply_standard_Scaler(nn_unreduced_estimation_patches, scaler=scaler, inverse=True)  # called Z in the paper
             
-#
+
 #            vertical_patch_count = nn_style.shape[0] // patch_size
 #            horizontal_patch_count = nn_style.shape[1] // patch_size
 #            patch_index = 0
@@ -130,7 +131,8 @@ def main():
 #                    patch_index += 1
 
             # nn_style image should be ready by now
-
+            images['estimation'][list(images.index).index(layer) - 1] =\
+                rescale(estimated_image, 2, multichannel=True,anti_aliasing=True, mode='constant', cval=0)
 
 if __name__ == "__main__":
     main()

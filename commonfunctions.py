@@ -3,6 +3,7 @@
 import skimage.io as io
 import matplotlib.pyplot as plt
 import numpy as np
+from skimage.color import rgb2gray,rgb2hsv
 
 
 
