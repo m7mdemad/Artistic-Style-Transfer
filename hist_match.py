@@ -27,15 +27,7 @@ def hist_match(content, style):
 
 
 def color_transform(content, style):
-    '''
-    rcomp_C = rgb2gray(content[:,:,0])
-    gcomp_C = rgb2gray(content[:,:,1])
-    bcomp_C = rgb2gray(content[:,:,2])
 
-    rcomp_S = rgb2gray(style[:,:,0])
-    gcomp_S = rgb2gray(style[:,:,1])
-    bcomp_S = rgb2gray(style[:,:,2])
-    '''
     rcomp_C = content[:, :, 0]
     gcomp_C = content[:, :, 1]
     bcomp_C = content[:, :, 2]
