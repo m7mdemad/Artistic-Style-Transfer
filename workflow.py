@@ -6,13 +6,14 @@ from skimage.util import noise
 from NN import *
 from skimage.transform import rescale
 import pandas as pd
+from irlsV2 import IRLS
 
 
 L_max = 3
 patch_sizes = np.array([33, 21, 13, 9])
 subsampling_gaps = np.array([28, 18, 8, 5])
 r = 0.8  # robust fusion for IRLS
-I_alg = 3
+I_alg = 1
 
 """
     *takes conent, style and segmentation images and returns gaussian pyramid built from them
@@ -29,8 +30,8 @@ def initialize(content, style, segmentation):
     images = pd.DataFrame(index=["L" + str(i) for i in range(L_max + 1)], columns=['content', 'style', 'segmentation', 'estimation'])
     images['content'] = list(pyramid_gaussian(new_content, multichannel=True, max_layer=L_max))
     images['style'] = list(pyramid_gaussian(style, multichannel=True, max_layer=L_max))
-    # iamges['segmentation'] = list(pyramid_gaussian(segmentation, multichannel=True, max_layer=L_max))
-    images['segmentation'] = [None]*(L_max+1)
+    images['segmentation'] = list(pyramid_gaussian(segmentation, multichannel=True, max_layer=L_max))
+    #mages['segmentation'] = [None]*(L_max+1)
 
     # initialize X with additive gaussian to content ∼ N (0, 50)
     estimated_image = noise.random_noise(content, mode="gaussian", mean=0,
@@ -59,9 +60,9 @@ def image_to_patches(image, overlapping_patches=True, is_pyramid=True, index = 0
         return patches_pyramid
     else:
         if overlapping_patches is True:
-            patches = get_patches_aux(image, patch_sizes=patch_sizes[index], subsampling_gaps=subsampling_gaps[index])
+            patches = get_patches_aux(image, patch_size=patch_sizes[index], subsampling_gap=subsampling_gaps[index])
         else:
-            patches = get_patches(image, patch_sizes=patch_sizes[index], subsampling_gaps=patch_sizes[index])
+            patches = get_patches(image, patch_size=patch_sizes[index], subsampling_gap=patch_sizes[index])
         return patches
 
 def get_nn_style_patch_from_indices(style_patches, nn_indices, estimation_p_shape):
@@ -109,7 +110,7 @@ def prepare_style_patches(style_pyramid):
 def content_fusion(content, estimation, segmentation):
     identity_matrix = np.identity(segmentation.shape[0])
     return np.stack([((np.linalg.inv(segmentation[:,:,i] + identity_matrix))
-                      .dot(estimation[:,:,i] + segmentation[:,:,i].dot(c[:,:,i]))) for i in range(3) ], axis=(2))
+                      .dot(estimation[:,:,i] + segmentation[:,:,i].dot(content[:,:,i]))) for i in range(3) ], axis=(2))
     
     
 
@@ -132,26 +133,36 @@ def main():
             pca     = pca_objects[patch_size][layer]
             nn      = nn_objects[patch_size][layer]
             current_style_patches       = style_patches[patch_size][layer]
+            
             for _ in range(I_alg):
                 # convert estimation image of the current layer to patches we can operate on
-                current_estimation_patches  = image_to_patches(images['estimation'][layer], is_pyramid=False)
+                current_estimation_patches  = image_to_patches(images['estimation'][layer], is_pyramid=False, index=index)
                 flat_curr_estimation_patches= flatten_patches(current_estimation_patches, rotate=False)
                 scaled_estimation_patches = apply_standard_Scaler(flat_curr_estimation_patches, scaler=scaler)
                 reduced_estimation_patches = apply_pca(scaled_estimation_patches, pca=pca)
                 nn_indices = apply_nearest_neighbor(reduced_estimation_patches, nbrs=nn)
                 nn_patches = get_nn_style_patch_from_indices(current_style_patches, nn_indices, current_estimation_patches.shape)
-    
-    
-                # nn_style image should be ready by now
+#                show_images([images['estimation'][layer]], ["estimation"])
+#                print("patch size:",patch_size, "layer:", layer, "I:", _)
+                show_images([images['style'][layer]], ["style"])
+#                print("patches")
+#                show_images(nn_patches.reshape((nn_patches.shape[0] * nn_patches.shape[1], *nn_patches.shape[2:])))
+                #show_images([images['estimation'][layer]])
+                # IRLS
+                show_images([images['estimation'][layer]])
+                estimation_image = IRLS(images['estimation'][layer], nn_patches, patch_size, subsampling_gaps[index])
                 # content fusion
-                estimation_image = content_fusion(content, estimation, segmentation)
+                estimation_image = content_fusion(images['content'][layer], estimation_image, images['segmentation'][layer])
                 # color transfer
                 estimation_image = color_transform(estimation_image, images['style'][layer])
                 # domain transform filter
                 
+                #show_images([images['style'][layer], images['content'][layer], estimation_image], ["style", "content", "estimation"] )
+                images['estimation'][layer] = estimation_image
+                
             # scaling up
             images['estimation'][list(images.index).index(layer) - 1] =\
-                rescale(estimated_image, 2, multichannel=True,anti_aliasing=True, mode='constant', cval=0)
+                rescale(images['estimation'][layer], 2, multichannel=True,anti_aliasing=True, mode='constant', cval=0)
 
 if __name__ == "__main__":
     main()
