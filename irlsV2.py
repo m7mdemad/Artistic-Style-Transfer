@@ -22,13 +22,15 @@ def IRLS(X, Z, patchSize, gap):
                 startcol = y * gap
 
                 patch = Z[x,y]
-                patch_weight = 1/(np.abs(patch - X[startRow:startRow+patchSize, startcol:startcol+patchSize]) + e)
+                patch_weight = (np.abs(patch - X[startRow:startRow+patchSize, startcol:startcol+patchSize]) + e)
 #                print("patch", patch)
 #                print("weight", patch_weight)
-                Xk[startRow:startRow+patchSize, startcol:startcol+patchSize] += patch * patch_weight
-                W[startRow:startRow+patchSize, startcol:startcol+patchSize] += patch_weight
+                np.add(Xk[startRow:startRow+patchSize, startcol:startcol+patchSize], patch * patch_weight, out=Xk[startRow:startRow+patchSize, startcol:startcol+patchSize], casting="unsafe")
+#                Xk[startRow:startRow+patchSize, startcol:startcol+patchSize] += patch * patch_weight
+                np.add(W[startRow:startRow+patchSize, startcol:startcol+patchSize],  patch_weight, out=W[startRow:startRow+patchSize, startcol:startcol+patchSize], casting="unsafe")
+ #               W[startRow:startRow+patchSize, startcol:startcol+patchSize] += patch_weight
         X = Xk/W
-        show_images([X])
+        show_images([X],'irls')
     return X
  
     
