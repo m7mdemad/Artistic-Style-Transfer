@@ -35,9 +35,6 @@ def edge_seg(content, sigma=2, blur=7): #sigma to be used in LoG, blur to be use
                 output[y, x] = 1
                 
     show_images([output])
-    outp = gaussian(0.5 * output, blur) #smoothing the output 
-
-    show_images([outp])
     
     #segmentation using morphological active contours with 50 iterations
     img = morphological_chan_vese(content, 50)
@@ -62,4 +59,3 @@ def edge_seg(content, sigma=2, blur=7): #sigma to be used in LoG, blur to be use
 def test():
 	content = io.imread(r"images/house 2-small.jpg")
 	edge_seg(content)
-

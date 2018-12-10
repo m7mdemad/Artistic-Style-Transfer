@@ -15,9 +15,7 @@ def hist_match(content, style):
 
     # get cum sum of counts and normalize it
     c_quantiles = np.cumsum(c_counts, dtype=float) / content.size
-    #c_quantiles /= c_quantiles[-1]
     s_quantiles = np.cumsum(s_counts, dtype=float) / style.size
-    #s_quantiles /= s_quantiles[-1]
 
     # interpolate linearly to find the pixel values in the template image
     # that correspond most closely to the quantiles in the source image
@@ -28,19 +26,19 @@ def hist_match(content, style):
 
 def color_transform(content, style):
 
-    rcomp_C = content[:, :, 0]
-    gcomp_C = content[:, :, 1]
-    bcomp_C = content[:, :, 2]
+    rcomp_C = content[:, :, 0]*255
+    gcomp_C = content[:, :, 1]*255
+    bcomp_C = content[:, :, 2]*255
 
-    rcomp_S = style[:, :, 0]
-    gcomp_S = style[:, :, 1]
-    bcomp_S = style[:, :, 2]
+    rcomp_S = style[:, :, 0]*255
+    gcomp_S = style[:, :, 1]*255
+    bcomp_S = style[:, :, 2]*255
 
     matchedr = hist_match(rcomp_C, rcomp_S)
     matchedg = hist_match(gcomp_C, gcomp_S)
     matchedb = hist_match(bcomp_C, bcomp_S)
     
-    return np.stack([matchedr, matchedg, matchedb], axis=2).astype('uint8')
+    return (np.stack([matchedr, matchedg, matchedb], axis=2).astype('uint8'))/255
 
 def test():
     content = io.imread(r"images/house 2-small.jpg")
@@ -51,13 +49,3 @@ def test():
     myimg = color_transform(content, style)
 
     show_images([myimg])
-# add gaussian noise
-'''
-row,col,ch= myimg.shape
-mean = 0
-sigma = 50
-gauss = np.random.normal(mean,sigma,(row,col,ch))
-gauss = gauss.reshape(row,col,ch)
-noisy = myimg + gauss
-show_images([noisy.astype('uint8')])
-'''
