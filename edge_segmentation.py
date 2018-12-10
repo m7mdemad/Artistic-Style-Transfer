@@ -62,3 +62,4 @@ def edge_seg(content, sigma=2, blur=7): #sigma to be used in LoG, blur to be use
 def test():
 	content = io.imread(r"images/house 2-small.jpg")
 	edge_seg(content)
+
