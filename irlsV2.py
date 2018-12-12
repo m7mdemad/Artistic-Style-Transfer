@@ -10,27 +10,29 @@ def IRLS(X, Z, patchSize, gap):
     r = 0.8 # robust statistics value to use (from the research paper) 
     e = 1e-10 #some small value
     limit = 5 # no  . of iterations
-    patchW = Z.shape[0]
-    patchH = Z.shape[1]
-    show_images([X])
+    patchH = Z.shape[0]
+    patchW = Z.shape[1]
+#    show_images([X])
     for k in range(0, limit):
-        Xk = np.copy(X)
-        W = np.ones_like(X)
-        for x in range(0, patchW):
-            for y in range(0, patchH):
-                startRow = x * gap
-                startcol = y * gap
-
-                patch = Z[x,y]
+        Xk = np.zeros_like(X)
+        W = np.zeros_like(X)
+        for y in range(0, patchW):
+            for x in range(0, patchH):
+                startRow = y * gap
+                startcol = x * gap
+                patch = Z[y,x]
+#                show_images([patch, X[startRow:startRow+patchSize, startcol:startcol+patchSize]], ["nearest patch", "image patch"])
                 patch_weight = (np.abs(patch - X[startRow:startRow+patchSize, startcol:startcol+patchSize]) + e)
 #                print("patch", patch)
 #                print("weight", patch_weight)
-                np.add(Xk[startRow:startRow+patchSize, startcol:startcol+patchSize], patch * patch_weight, out=Xk[startRow:startRow+patchSize, startcol:startcol+patchSize], casting="unsafe")
-#                Xk[startRow:startRow+patchSize, startcol:startcol+patchSize] += patch * patch_weight
-                np.add(W[startRow:startRow+patchSize, startcol:startcol+patchSize],  patch_weight, out=W[startRow:startRow+patchSize, startcol:startcol+patchSize], casting="unsafe")
- #               W[startRow:startRow+patchSize, startcol:startcol+patchSize] += patch_weight
+#                np.add(Xk[startRow:startRow+patchSize, startcol:startcol+patchSize], patch * patch_weight, out=Xk[startRow:startRow+patchSize, startcol:startcol+patchSize], casting="unsafe")
+                Xk[startRow:startRow+patchSize, startcol:startcol+patchSize] += patch * patch_weight
+#                np.add(W[startRow:startRow+patchSize, startcol:startcol+patchSize],  patch_weight, out=W[startRow:startRow+patchSize, startcol:startcol+patchSize], casting="unsafe")
+                W[startRow:startRow+patchSize, startcol:startcol+patchSize] += patch_weight
+        mask = W == 0
+        W[mask] = 1
         X = Xk/W
-        show_images([X],'irls')
+        # show_images([X],'irls')
     return X
  
     

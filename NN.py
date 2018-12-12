@@ -12,7 +12,7 @@ def get_patches(img, patch_sizes, subsampling_gaps):
 #def get_patches_aux (img, patch_sizes, subsampling_gaps, index):
 #    patch_size = patch_sizes[index]
 #    gap = subsampling_gaps[index]
-#    patches = 
+#    patches =
 #    vertical_patch_count    = (img.shape[0] - patch_size) // gap + 1
 #    horizontal_patch_count   = (img.shape[1] - patch_size) // gap + 1
 #    total_patch_count = vertical_patch_count * horizontal_patch_count
@@ -30,7 +30,7 @@ def get_patches(img, patch_sizes, subsampling_gaps):
     
 from skimage.util import view_as_windows
 
-def get_patches_aux(img, patch_size, subsampling_gap): 
+def get_patches_aux(img, patch_size, subsampling_gap):
     return view_as_windows(img, window_shape=(patch_size, patch_size, 3), step=subsampling_gap)[:,:,0]
 
 def flatten_patches(patches, rotate = True):
@@ -81,18 +81,16 @@ def apply_standard_Scaler(patches, scaler=None, inverse=False):
 
 from sklearn.neighbors import NearestNeighbors
 
-
 """
     returns index of nearest neighbour for some vector
 """
 def apply_nearest_neighbor(patches, nbrs=None):
-    if nbrs is None:
-        nbrs = NearestNeighbors(n_neighbors=1)
-        nbrs.fit(patches)
-        return nbrs
+   if nbrs is None:
+       nbrs = NearestNeighbors(n_neighbors=1)
+       nbrs.fit(patches)
+       return nbrs
 
-    return nbrs.kneighbors(patches, return_distance=False).T[0]
-
+   return nbrs.kneighbors(patches, return_distance=False).T[0]
 
 """
     # setup workflow:
