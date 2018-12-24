@@ -7,5 +7,6 @@
 3- choose the style image using "Select content image" button.
 4- choose the desired number of iteration to run the algorithm.
 5- choose the desired number of iteration to run IRLS.
-6- click proceed.
+6- choose the segmentation factor.
+6- click proceed. note: the result can take along time especially with large number of iterations, please be patient.
 ```
