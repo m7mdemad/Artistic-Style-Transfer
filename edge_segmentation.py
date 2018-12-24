@@ -52,9 +52,6 @@ def edge_seg(img_path, sigma=4): #sigma to be used in LoG, blur to be used in ga
     maximum = mask.max()
     mask = mask/maximum
     return mask
-    #to do => get the mask
-    #egde detection(zero crossing) can be enhanced
-    #return the final mask
 
 #test
 def test():
