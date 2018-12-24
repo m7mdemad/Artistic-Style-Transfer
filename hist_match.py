@@ -17,8 +17,8 @@ def hist_match(content, style):
     c_quantiles = np.cumsum(c_counts, dtype=float) / content.size
     s_quantiles = np.cumsum(s_counts, dtype=float) / style.size
 
-    # interpolate linearly to find the pixel values in the template image
-    # that correspond most closely to the quantiles in the source image
+    # interpolate linearly to find the pixel values in the style image
+    # that correspond most closely to the quantiles in the content image
     interps_values = np.interp(c_quantiles, s_quantiles, s_values)
 
     return interps_values[indx].reshape(oldshape)
