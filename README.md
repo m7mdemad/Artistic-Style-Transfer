@@ -1,6 +1,6 @@
 # Artistic-Style-Transfer
 
-# To run the algorithm:
+## To run the algorithm:
 ```list
 1- run "GUI.py".
 2- choose the content image using "Select content image" button.
