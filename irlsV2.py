@@ -2,22 +2,22 @@ import numpy as np
 from skimage.util import view_as_windows
 from commonfunctions import *
 
-def IRLS(X, Z, patchSize, gap):
+def IRLS(X, Z, patchSize, gap, limit):
 #     X estimate image
 #     Z is the style patches
 #     patchSize is the size of each patch
 #     gap is the step in X  
     r = 0.8 # robust statistics value to use (from the research paper) 
     e = 1e-10 #some small value
-    limit = 5 # no  . of iterations
+#    limit = 10 # no  . of iterations
     patchH = Z.shape[0]
     patchW = Z.shape[1]
 #    show_images([X])
     for k in range(0, limit):
         Xk = np.zeros_like(X)
         W = np.zeros_like(X)
-        for y in range(0, patchW):
-            for x in range(0, patchH):
+        for y in range(0, patchH):
+            for x in range(0, patchW):
                 startRow = y * gap
                 startcol = x * gap
                 patch = Z[y,x]

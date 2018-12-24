@@ -8,12 +8,14 @@ from skimage.transform import rescale
 import pandas as pd
 from irlsV2 import IRLS
 from animated_plot import show_animated
+from segmentation import get_segmentation
+#from Domain_Transfer_2 import *
 
 L_max = 3
 patch_sizes = np.array([33, 21, 13, 9])
 subsampling_gaps = np.array([28, 18, 8, 5])
 r = 0.8  # robust fusion for IRLS
-I_alg = 3
+I_alg = 2
 
 """
     *takes conent, style and segmentation images and returns gaussian pyramid built from them
@@ -28,14 +30,14 @@ def initialize(content, style, segmentation):
     new_content = color_transform(content, style)
     # Build the Gaussian pyramids of C, S, and W
     images = pd.DataFrame(index=["L" + str(i) for i in range(L_max + 1)], columns=['content', 'style', 'segmentation', 'estimation'])
+    images['original'] = list(pyramid_gaussian(content, multichannel=True, max_layer=L_max))
     images['content'] = list(pyramid_gaussian(new_content, multichannel=True, max_layer=L_max))
     images['style'] = list(pyramid_gaussian(style, multichannel=True, max_layer=L_max))
-    images['segmentation'] = list(pyramid_gaussian(segmentation, multichannel=True, max_layer=L_max))
+    images['segmentation'] = list(pyramid_gaussian(segmentation, multichannel=False, max_layer=L_max))
     #mages['segmentation'] = [None]*(L_max+1)
 
     # initialize X with additive gaussian to content ∼ N (0, 50)
-    estimated_image = noise.random_noise(new_content, mode="gaussian", mean=0,
-                                         var=50 / 256)  # normalized variance because image is normalized
+    estimated_image = noise.random_noise(new_content, mode="gaussian", mean=0, var=50 / 256)  # normalized variance because image is normalized
     images['estimation'] = list(pyramid_gaussian(estimated_image, multichannel=True, max_layer=L_max))
 #    images['estimation'][images.index[-1]] = rescale(estimated_image, 1 / (2 ** L_max), multichannel=True,anti_aliasing=True, mode='constant', cval=0)
 
@@ -109,22 +111,28 @@ def prepare_style_patches(style_pyramid):
     return scaler, pca, nbrs, style_patches
 
 def content_fusion(content, estimation, segmentation):
-    identity_matrix = np.identity(segmentation.shape[0])
-    return np.stack([((np.linalg.inv(segmentation[:,:,i] + identity_matrix)).dot(estimation[:,:,i] + segmentation[:,:,i].dot(content[:,:,i]))) for i in range(3) ], axis=(2))
-    
-    
-    
+    I = np.ones_like(segmentation.shape[0])
+    w_I_ = 1/(segmentation + I)
+#    return np.stack([((np.linalg.inv(segmentation[:,:,i] + identity_matrix)).dot(estimation[:,:,i] + segmentation[:,:,i].dot(content[:,:,i]))) for i in range(3) ], axis=(2))
+#    return np.stack([((np.linalg.inv(segmentation[:,:,i] + identity_matrix)).dot(estimation[:,:,i] + segmentation[:,:,i]*content[:,:,i])) for i in range(3) ], axis=(2))
+    return np.stack([(w_I_ * (estimation[:,:,i] + segmentation*content[:,:,i])) for i in range(3) ], axis=(2))
 
-def main():
-    
-    content = io.imread(r"images/house 2-small.jpg").astype('float64')/256
-    style = io.imread(r"images/starry-night - small.jpg").astype('float64')/256
-#    content = np.copy(style)
+
+def style_transfer(content_path, style_path, I_irls, I_alg, seg_fac):
+#    content_path = r"images/house 2-small.jpg"
+#    content_path = r"images/me.jpg"
+    content = io.imread(content_path).astype('float64')/255
+    # content = io.imread(r"images/starry-night - small.jpg").astype('float64')/256
+#    style = io.imread(r"images/starry-night - small.jpg").astype('float64')/255
+    style = io.imread(style_path).astype('float64')/256
+#     style = io.imread(r"images/derschrei.jpg").astype('float64')/256
+#     style = io.imread(r"images/picasso2.jpg").astype('float64')/256
+   # content = np.copy(style)
     # from skimage.filters import gaussian
     # content = gaussian(content,10, multichannel=True)
     # TODO: Add segmentation here
-    segmentation = np.ones_like(content)
-
+    segmentation = get_segmentation(content_path)*seg_fac + 0.25*seg_fac
+#    segmentation = np.zeros(content.shape[:-1])
     
     images = initialize(content, style, segmentation)
     scaler_objects, pca_objects, nn_objects, style_patches = prepare_style_patches(images['style'])
@@ -138,7 +146,9 @@ def main():
             
             for _ in range(I_alg):
                 # convert estimation image of the current layer to patches we can operate on
-                current_estimation_patches  = image_to_patches(images['estimation'][layer], is_pyramid=False, index=index)
+                estimation_image = noise.random_noise(images['estimation'][layer], mode="gaussian", mean=0, var=100 / 256)  # normalized variance because image is normalized
+
+                current_estimation_patches  = image_to_patches(estimation_image, is_pyramid=False, index=index)
                 flat_curr_estimation_patches= flatten_patches(current_estimation_patches, rotate=False)
                 scaled_estimation_patches = apply_standard_Scaler(flat_curr_estimation_patches, scaler=scaler)
                 reduced_estimation_patches = apply_pca(scaled_estimation_patches, pca=pca)
@@ -155,23 +165,41 @@ def main():
                 #show_images([images['estimation'][layer]])
                 # IRLS
 #                show_images([images['estimation'][layer]])
-                estimation_image = IRLS(images['estimation'][layer], nn_patches, patch_size, subsampling_gaps[index])
+                estimation_image = IRLS(images['estimation'][layer], nn_patches, patch_size, subsampling_gaps[index], I_irls)
+                e1 = np.copy(estimation_image)
+                # show_images([estimation_image], ['after irls'])
                 # content fusion
                 estimation_image = content_fusion(images['content'][layer], estimation_image, images['segmentation'][layer])
+                e2 = np.copy(estimation_image)
+                # show_images([estimation_image], ['after content fusion'])
                 # color transfer
-                # estimation_image = color_transform(estimation_image * 256, images['style'][layer] * 256)
+                estimation_image = color_transform(estimation_image , images['style'][layer])
+                e3 = np.copy(estimation_image)
+                # show_images([estimation_image], ['after color transform'])
                 # domain transform filter
+#                sigma_s = 100
+#                sigma_r = 3
+#
+#                estimation_image = Iterative_C(estimation_image * 255, sigma_s, sigma_r,3)/255
+#                e4 = np.copy(estimation_image)
+                # show_images([estimation_image], ['after domain transfer'])
                 
-                # show_images([images['style'][layer], images['content'][layer], estimation_image], ["style", "content", "estimation"] )
-                show_animated([images['style'][layer], images['content'][layer], estimation_image], ["style", "content", "estimation"])
+                
+                # show_images([images['style'][layer], images['original'][layer], estimation_image], ["style", "content", "estimation"] )
+                show_animated([images['style'][layer], images['original'][layer], estimation_image], ["style", "content", "estimation"] )
                 # print("style max", images['style'][layer].max(),"style min", images['style'][layer].min())
                 # print("content max", images['content'][layer].max(),"content min", images['content'][layer].min())
                 # print("est max", images['estimation'][layer].max(),"est min", images['estimation'][layer].min())
+#                estimation_image = noise.random_noise(estimation_image, mode="gaussian", mean=0, var=50 / 256)  # normalized variance because image is normalized
+#                e5 = estimation_image
+#                show_animated([e1, e2, e3, e4, e5], ["irls", "content fusion", "color transfer", "domain transform", "noise"])
                 images['estimation'][layer] = estimation_image
-                
-            # scaling up
-            images['estimation'][list(images.index).index(layer) - 1] =\
-                rescale(images['estimation'][layer], 2, multichannel=True,anti_aliasing=True, mode='constant', cval=0)
 
+            # scaling up
+        images['estimation'][list(images.index).index(layer) - 1] =\
+                rescale(images['estimation'][layer], 2, multichannel=True,anti_aliasing=True, mode='constant', cval=0)
+#    show_images([images['style'][layer], images['original'][layer], images['estimation']['L0']],["style", "content", "result"])
+#    plt.pause(500)
+    return images['estimation']['L0']
 if __name__ == "__main__":
     main()

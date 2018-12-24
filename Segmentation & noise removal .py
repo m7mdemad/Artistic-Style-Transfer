@@ -5,7 +5,7 @@ from cv2 import ximgproc as a
 from skimage.util import random_noise
 
 
-img = cv2.imread('abba.png',0)
+img = cv2.imread('images/house 2-small.jpg',0)
 edges3=np.copy(img)
 ###### Edge detection
 edges = cv2.Canny(img,100,200)

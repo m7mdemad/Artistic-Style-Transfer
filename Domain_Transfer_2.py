@@ -1,5 +1,5 @@
 import numpy as np
-from commonfunctions import * 
+from commonfunctions import *
 import cv2
 
 def image_transpose(I):

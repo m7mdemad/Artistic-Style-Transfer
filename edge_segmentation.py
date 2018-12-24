@@ -4,8 +4,8 @@ import scipy.ndimage as nd
 from skimage.filters import gaussian
 from skimage.segmentation import morphological_chan_vese
 
-def edge_seg(content, sigma=2, blur=7): #sigma to be used in LoG, blur to be used in gaussian filter
-    
+def edge_seg(img_path, sigma=4): #sigma to be used in LoG, blur to be used in gaussian filter
+    content = io.imread(img_path)
     content = rgb2gray(content)
     
     #to detect edges we compute zero-crossings after filtering content image with a Laplacian of Gaussian (LoG) filter.
@@ -34,11 +34,11 @@ def edge_seg(content, sigma=2, blur=7): #sigma to be used in LoG, blur to be use
             if ((maxP - minP) > thres) and zeroCross:
                 output[y, x] = 1
                 
-    show_images([output])
+    #show_images([output])
     
     #segmentation using morphological active contours with 50 iterations
     img = morphological_chan_vese(content, 50)
-    show_images([img])
+    #show_images([img])
     
     #interpolate both edge detection output and segmentation output (can be modified later)
     img = img.flatten()
@@ -46,16 +46,19 @@ def edge_seg(content, sigma=2, blur=7): #sigma to be used in LoG, blur to be use
     temp = np.zeros(output.shape)
     for i in range(len(output)):
         temp[i] = 10 * img[i] * output[i]
-    temp = np.reshape(temp, content.shape)
-    
-    w = gaussian((temp*255).astype('uint8'), blur) #smoothing
-    show_images([(temp*255).astype('uint8'), w], ['before blur', 'after blur'])
-
+    mask = np.reshape(temp, content.shape)
+#    mask = gaussian((temp*255).astype('uint8'), blur) #smoothing
+   # show_images([(temp*255).astype('uint8'), w], ['before blur', 'after blur']) 
+    maximum = mask.max()
+    mask = mask/maximum
+    return mask
     #to do => get the mask
     #egde detection(zero crossing) can be enhanced
     #return the final mask
 
 #test
 def test():
-	content = io.imread(r"images/house 2-small.jpg")
-	edge_seg(content)
+	content = io.imread('images/house 2-small.jpg')
+	return edge_seg(content)
+
+#w = test()
