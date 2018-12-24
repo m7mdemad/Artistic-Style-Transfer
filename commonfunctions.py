@@ -22,6 +22,8 @@ def show_images(images,titles=None):
             plt.gray()
         plt.imshow(image)
         a.set_title(title)
+        a.get_xaxis().set_visible(False)
+        a.get_yaxis().set_visible(False)
         n += 1
     fig.set_size_inches(np.array(fig.get_size_inches()) * n_ims)
     plt.show() 
