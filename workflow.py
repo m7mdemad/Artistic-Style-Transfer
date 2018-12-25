@@ -11,7 +11,7 @@ from animated_plot import show_animated
 from segmentation import get_segmentation
 #from Domain_Transfer_2 import *
 
-L_max = 3
+
 patch_sizes = np.array([33, 21, 13, 9])
 subsampling_gaps = np.array([28, 18, 8, 5])
 r = 0.8  # robust fusion for IRLS
@@ -25,7 +25,7 @@ I_alg = 2
 """
 
 
-def initialize(content, style, segmentation):
+def initialize(content, style, segmentation,L_max):
     # apply color transfer from S to C
     new_content = color_transform(content, style)
     # Build the Gaussian pyramids of C, S, and W
@@ -92,7 +92,7 @@ def get_nn_style_patch_from_indices(style_patches, nn_indices, estimation_p_shap
     * It returns the trained models objects  and the pyramid of patches acquired
 """
 
-def prepare_style_patches(style_pyramid):
+def prepare_style_patches(style_pyramid,L_max):
     
     style_patches = pd.DataFrame(data=image_to_patches(style_pyramid),
                                  index=["L" + str(i) for i in range(L_max + 1)], columns=patch_sizes)
@@ -118,24 +118,14 @@ def content_fusion(content, estimation, segmentation):
     return np.stack([(w_I_ * (estimation[:,:,i] + segmentation*content[:,:,i])) for i in range(3) ], axis=(2))
 
 
-def style_transfer(content_path, style_path, I_irls, I_alg, seg_fac):
-#    content_path = r"images/house 2-small.jpg"
-#    content_path = r"images/me.jpg"
+def style_transfer(content_path, style_path, I_irls, I_alg, seg_fac,L_max):
     content = io.imread(content_path).astype('float64')/255
-    # content = io.imread(r"images/starry-night - small.jpg").astype('float64')/256
-#    style = io.imread(r"images/starry-night - small.jpg").astype('float64')/255
-    style = io.imread(style_path).astype('float64')/256
-#     style = io.imread(r"images/derschrei.jpg").astype('float64')/256
-#     style = io.imread(r"images/picasso2.jpg").astype('float64')/256
-   # content = np.copy(style)
-    # from skimage.filters import gaussian
-    # content = gaussian(content,10, multichannel=True)
-    # TODO: Add segmentation here
+    style = io.imread(style_path).astype('float64')/255
     segmentation = get_segmentation(content_path)*seg_fac + 0.25*seg_fac
 #    segmentation = np.zeros(content.shape[:-1])
     
-    images = initialize(content, style, segmentation)
-    scaler_objects, pca_objects, nn_objects, style_patches = prepare_style_patches(images['style'])
+    images = initialize(content, style, segmentation,L_max)
+    scaler_objects, pca_objects, nn_objects, style_patches = prepare_style_patches(images['style'],L_max=L_max)
     for layer in reversed(style_patches.index):
         for index, patch_size in enumerate(style_patches.columns):
             # add another loop for IRLS itarations
@@ -153,39 +143,23 @@ def style_transfer(content_path, style_path, I_irls, I_alg, seg_fac):
                 scaled_estimation_patches = apply_standard_Scaler(flat_curr_estimation_patches, scaler=scaler)
                 reduced_estimation_patches = apply_pca(scaled_estimation_patches, pca=pca)
                 nn_indices = apply_nearest_neighbor(reduced_estimation_patches, nbrs=nn)
-#                s =list(nn_indices)
-#                freq = {i:s.count(i) for i in set(s)}
-#                print(sorted(freq.values(),reverse=True))
                 nn_patches = get_nn_style_patch_from_indices(current_style_patches, nn_indices, current_estimation_patches.shape)
-#                show_images([images['estimation'][layer]], ["estimation"])
-#                print("patch size:",patch_size, "layer:", layer, "I:", _)
-#                show_images([images['style'][layer]], ["style"])
-#                print("patches")
-#                show_images(nn_patches.reshape((nn_patches.shape[0] * nn_patches.shape[1], *nn_patches.shape[2:])))
-                #show_images([images['estimation'][layer]])
                 # IRLS
-#                show_images([images['estimation'][layer]])
                 estimation_image = IRLS(images['estimation'][layer], nn_patches, patch_size, subsampling_gaps[index], I_irls)
                 e1 = np.copy(estimation_image)
-                # show_images([estimation_image], ['after irls'])
                 # content fusion
                 estimation_image = content_fusion(images['content'][layer], estimation_image, images['segmentation'][layer])
                 e2 = np.copy(estimation_image)
-                # show_images([estimation_image], ['after content fusion'])
                 # color transfer
                 estimation_image = color_transform(estimation_image , images['style'][layer])
                 e3 = np.copy(estimation_image)
-                # show_images([estimation_image], ['after color transform'])
                 # domain transform filter
 #                sigma_s = 100
 #                sigma_r = 3
 #
 #                estimation_image = Iterative_C(estimation_image * 255, sigma_s, sigma_r,3)/255
 #                e4 = np.copy(estimation_image)
-                # show_images([estimation_image], ['after domain transfer'])
                 
-                
-                # show_images([images['style'][layer], images['original'][layer], estimation_image], ["style", "content", "estimation"] )
                 show_animated([images['style'][layer], images['original'][layer], estimation_image], ["style", "content", "estimation"] )
                 # print("style max", images['style'][layer].max(),"style min", images['style'][layer].min())
                 # print("content max", images['content'][layer].max(),"content min", images['content'][layer].min())

@@ -34,17 +34,23 @@ class Gui:
         self.var1 = StringVar(self.master)
         self.e1 = Entry(self.master, textvariable=self.var1).grid(row=1, column=1, rowspan=200, pady=580)
 
-        self.op2 = Label(self.master, text="No. of algorithm Iterations").grid(row=3, column=0, rowspan=250, pady=610)
+        self.op2 = Label(self.master, text="No. of algorithm Iterations").grid(row=2, column=0, rowspan=250, pady=610)
 
         self.var2 = StringVar(self.master)
-        self.e2 = Entry(self.master, textvariable=self.var2).grid(row=3, column=1, rowspan=225, pady=625)
+        self.e2 = Entry(self.master, textvariable=self.var2).grid(row=2, column=1, rowspan=225, pady=625)
 
-        self.op3 = Label(self.master, text="segmentation factor").grid(row=5, column=0, rowspan=130, pady=440)
+        self.op3 = Label(self.master, text="segmentation factor").grid(row=1, column=3, rowspan=200, pady=440)
 
         self.var3 = StringVar(self.master)
         self.slider = Scale(self.master, from_=0.5, to=5.0, orient=HORIZONTAL,
-                            sliderlength=10, digits=2, resolution=0.5, variable=self.var3).grid(row=5, column=1,
-                                                                                                rowspan=130, pady=400)
+                            sliderlength=10, digits=2, resolution=0.5, variable=self.var3).grid(row=1, column=4,
+                                                                                                rowspan=200, pady=400)
+        self.op4 = Label(self.master, text="Layer_depth").grid(row=2, column=3, rowspan=225, pady=625)
+        self.var4 = StringVar(self.master)
+        self.slider2 = Scale(self.master, from_=0, to=5.0, orient=HORIZONTAL,
+                            sliderlength=10, digits=1, resolution=1, variable=self.var4).grid(row=2, column=4,
+                                                                                                rowspan=225, pady=625)
+
 
     def select_content(self):
         self.content = filedialog.askopenfilename(title="Select content image",
@@ -64,7 +70,6 @@ class Gui:
         panel1.image = img_content
         panel1.grid()
         panel1.place(x=25, y=150)
-
         img_style = Image.open(self.style)
         img_style = np.array(img_style)
         img_style = cv2.resize(img_style, (400, 400))
@@ -75,7 +80,7 @@ class Gui:
         panel2.grid()
         panel2.place(x=465, y=150)
         result = style_transfer(self.content, self.style, int(self.var1.get()), int(self.var2.get()),
-                                float(self.var3.get()))
+                                float(self.var3.get()),int(self.var4.get()))
 
         result = cv2.resize((255*result).astype('uint8'), (400, 400))
         result = Image.fromarray(result)
