@@ -4,7 +4,7 @@ import skimage.io as io
 import matplotlib.pyplot as plt
 import numpy as np
 from skimage.color import rgb2gray,rgb2hsv
-
+from scipy.signal import convolve2d
 
 
 # Show the figures / plots inside the notebook

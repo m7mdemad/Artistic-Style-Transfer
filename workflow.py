@@ -10,7 +10,7 @@ from irlsV2 import IRLS
 from animated_plot import show_animated
 from segmentation import get_segmentation
 #from Domain_Transfer_2 import *
-
+import cv2
 
 patch_sizes = np.array([33, 21, 13, 9])
 subsampling_gaps = np.array([28, 18, 8, 5])
@@ -120,7 +120,9 @@ def content_fusion(content, estimation, segmentation):
 
 def style_transfer(content_path, style_path, I_irls, I_alg, seg_fac,L_max):
     content = io.imread(content_path).astype('float64')/255
+    content = cv2.resize(content, (400,400))
     style = io.imread(style_path).astype('float64')/255
+    style = cv2.resize(style, (400, 400))
     segmentation = get_segmentation(content_path)*seg_fac + 0.25*seg_fac
 #    segmentation = np.zeros(content.shape[:-1])
     

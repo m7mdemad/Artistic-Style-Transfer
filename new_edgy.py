@@ -72,3 +72,9 @@ def edgy(img, thresh = 0, sigma_e = 1):
     
     w = gaussian((temp).astype('uint8'), 7) #smoothing
     show_images([(temp).astype('uint8'), w], ['before blur', 'after blur'])
+
+def test():
+	content = io.imread('images/house 2-small.jpg')
+	return edgy(content)
+
+test()
